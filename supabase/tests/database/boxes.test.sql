@@ -3,7 +3,7 @@
 -- terbuka (opens_at = now()).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(34);
 
 delete from public.letter_events;
 delete from vault.secrets where name = 'project_url';
@@ -111,12 +111,12 @@ select is(
 select is((select opened_at from public.open_box('KotakAAAAA')), null,
   'kotak yang belum waktunya tidak bisa dibuka');
 
--- 22-23: Buka sekarang memakai jam server, lalu kotak tertutup untuk perubahan dan titipan
+-- 22-23: Buka sekarang memakai jam server, lalu kotak tertutup untuk titipan. Selama penerima
+-- belum membukanya, pembuat masih bisa mengubahnya.
 select is((select opens_at from public.update_box((select id from box_a), '{"openNow": true}')), now(),
   'openNow mengisi opens_at dengan waktu server');
-select throws_ok($$
-  select public.update_box((select id from box_a), '{"title": "Telat"}')
-$$, 'P0001', 'box_closed', 'kotak yang sudah terbuka tidak bisa diubah');
+select is((select title from public.update_box((select id from box_a), '{"title": "Ultah Rani"}')),
+  'Ultah Rani', 'kotak yang terbuka tapi belum dibuka penerima masih bisa diubah');
 
 -- 24: titipan yang terbit setelah kotak terbuka ditolak
 select public.create_letter('00000000-0000-4000-8000-0000000000e3', '{}', '{}',
@@ -137,11 +137,31 @@ select is(
   (select array_agg(kind order by kind) from public.letter_events where kind in ('opened', 'box_opened')),
   array['box_opened'], 'membuka kotak dicatat box_opened, bukan opened per surat');
 
--- 28: kotak tidak bisa dihapus selama masih ada titipan
+-- 28: setelah penerima membukanya, kotak tidak bisa diubah lagi
+select throws_ok($$
+  select public.update_box((select id from box_a), '{"title": "Telat"}')
+$$, 'P0001', 'box_closed', 'kotak yang sudah dibuka penerima tidak bisa diubah');
+
+-- 29-31: jadwal yang salah: kotak B dibuka sekarang, lalu dijadwal ulang sebelum penerima
+-- membukanya. Kotaknya tersegel lagi dan titipan diterima lagi.
+select public.update_box((select id from box_b), '{"openNow": true}');
+select is(
+  (select (opens_at = now() + interval '3 days')::text || ':' || scheduled
+    from public.update_box((select id from box_b), jsonb_build_object('opensAt', now() + interval '3 days'))),
+  'true:true', 'kotak yang terbuka tapi belum dibuka penerima bisa dijadwal ulang');
+select is((select opened_at from public.open_box('KotakBBBBB')), null,
+  'kotak yang dijadwal ulang tersegel lagi untuk penerima');
+select public.create_letter('00000000-0000-4000-8000-0000000000e4', '{}', '{}',
+  decode(repeat('ab', 32), 'hex'), null, '[]', (select id from box_b), 'Susulan');
+select is(
+  (select status from public.publish_letter('00000000-0000-4000-8000-0000000000e4', 'TitipBBB01', '{}')),
+  'sent', 'titipan diterima lagi setelah kotak dijadwal ulang');
+
+-- 32: kotak tidak bisa dihapus selama masih ada titipan
 select throws_ok($$ delete from public.boxes where id = (select id from box_a) $$, '23503', null,
   'kotak dengan titipan tidak bisa dihapus langsung');
 
--- 29: run_cleanup mengisi photos_deleted_at kotak begitu foto semua titipannya terhapus
+-- 33: run_cleanup mengisi photos_deleted_at kotak begitu foto semua titipannya terhapus
 update public.letters set photos_expire_at = now() - interval '1 minute', opened_at = now() - interval '2 minutes',
   photos_deleted_at = now() where box_id = (select id from box_a) and status = 'sent';
 update public.boxes set opened_at = now() - interval '2 minutes', photos_expire_at = now() - interval '1 minute',
@@ -152,7 +172,7 @@ select public.run_cleanup();
 select isnt((select photos_deleted_at from public.boxes where id = (select id from box_a)), null,
   'photos_deleted_at kotak terisi setelah foto titipan terhapus');
 
--- 30: tertutup untuk klien
+-- 34: tertutup untuk klien
 set local role anon;
 select throws_ok($$ select public.create_box('KotakDDDDD', 'UndanganDDDD',
   decode(repeat('ab', 32), 'hex'), 'X', 'Y', 'laut', null) $$, '42501', null,

@@ -82,7 +82,7 @@ async function updateBox(request: Request, id: string) {
   const patch = parseUpdateBox(await readJson(request, BODY_LIMIT))
   const { data, error } = await db().rpc('update_box', { p_id: box.id, p_patch: patch })
   if ((error as { message?: string } | null)?.message === 'box_closed') {
-    throw new ApiError(409, 'box_closed', 'kotak sudah terbuka, jadi tidak bisa diubah')
+    throw new ApiError(409, 'box_closed', 'penerima sudah membuka kotaknya, jadi tidak bisa diubah')
   }
   const rejected = boxError(error, 422)
   if (rejected) throw rejected

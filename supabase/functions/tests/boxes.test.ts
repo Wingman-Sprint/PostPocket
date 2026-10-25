@@ -178,17 +178,22 @@ Deno.test({
     const wrongId = await call('GET', '/boxes/bukan-uuid', { token: box.editToken })
     assertEquals([wrongId.status, wrongId.body.error.code], [404, 'box_not_found'])
 
-    // Buka sekarang memakai jam server, lalu kotak tertutup untuk perubahan dan titipan.
+    // Buka sekarang memakai jam server, lalu kotak tertutup untuk titipan. Selama penerima belum
+    // membukanya, pembuat masih bisa mengubahnya; Buka sekarang lagi tidak menggeser waktunya.
     const opened = await call('PATCH', `/boxes/${box.id}`, {
       token: box.editToken,
       body: { openNow: true },
     })
     assertEquals([opened.status, opened.body.openable, opened.body.scheduled], [200, true, true])
-    const late = await call('PATCH', `/boxes/${box.id}`, {
+    const renamed = await call('PATCH', `/boxes/${box.id}`, {
       token: box.editToken,
-      body: { title: 'Telat' },
+      body: { title: 'Ultah ke-20 Rani', openNow: true },
     })
-    assertEquals([late.status, late.body.error.code], [409, 'box_closed'])
+    assertEquals([renamed.status, renamed.body.title, renamed.body.opensAt], [
+      200,
+      'Ultah ke-20 Rani',
+      opened.body.opensAt,
+    ])
     const lateEntry = await draftEntry(box.invite)
     assertEquals([lateEntry.created.status, lateEntry.created.body.error.code], [
       422,
@@ -213,6 +218,13 @@ Deno.test({
     )
     const again = await call('POST', `/k/${box.slug}/open`)
     assertEquals(again.body.openedAt, first.body.openedAt)
+
+    // Setelah penerima membukanya, kotak tidak bisa diubah lagi.
+    const late = await call('PATCH', `/boxes/${box.id}`, {
+      token: box.editToken,
+      body: { opensAt: new Date(Date.now() + 86400_000).toISOString() },
+    })
+    assertEquals([late.status, late.body.error.code], [409, 'box_closed'])
 
     // Pengirim menarik titipannya lagi, juga setelah kotak dibuka.
     const pulled = await call('DELETE', `/letters/${entry.created.body.id}`, {
@@ -278,6 +290,29 @@ Deno.test({
         JSON.stringify(body),
       )
     }
+
+    // Jadwal yang salah: kotak yang sudah terbuka tapi belum dibuka penerima masih bisa dijadwal
+    // ulang. Kotaknya tersegel lagi untuk penerima, dan titipan diterima lagi.
+    const opened = await call('PATCH', `/boxes/${box.id}`, {
+      token: box.editToken,
+      body: { openNow: true },
+    })
+    assertEquals(opened.body.openable, true)
+    assertEquals((await call('GET', `/boxes/invite/${box.invite}`)).body.closed, true)
+    const resealed = await call('PATCH', `/boxes/${box.id}`, {
+      token: box.editToken,
+      body: { opensAt: later },
+    })
+    assertEquals([resealed.status, resealed.body.openable, resealed.body.opensAt], [
+      200,
+      false,
+      later,
+    ])
+    assertEquals((await call('GET', `/boxes/invite/${box.invite}`)).body.closed, false)
+    const sealed = await call('GET', `/k/${box.slug}`)
+    assertEquals([sealed.body.openable, sealed.body.letters], [false, []])
+    const reopened = await draftEntry(box.invite, 'Susulan')
+    assertEquals(reopened.created.status, 201)
 
     // Pembuat menghapus satu titipan.
     const unknown = await call('DELETE', `/boxes/${box.id}/letters/${crypto.randomUUID()}`, {

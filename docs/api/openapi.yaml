@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PostPocket API
-  version: 0.4.1
+  version: 0.4.2
   description: |
     Kontrak API antara frontend (`apps/web`) dan backend (Supabase Edge Functions). Server
     melayani surat yang dikirim dan kotak bareng; Pocket, TV, dan Booth tetap di browser
@@ -37,13 +37,14 @@ info:
        tidak punya gambar OG dan tidak bisa dibuka lewat `/l/{slug}`.
     3. Kotak ditutup untuk titipan baru begitu `opensAt` lewat: waktu yang dijadwalkan pembuatnya,
        saat pembuatnya menekan "Buka sekarang" (`PATCH /boxes/{id}`), atau paling lambat 30 hari
-       setelah kotak dibuat.
+       setelah kotak dibuat. Selama penerima belum membukanya, pembuatnya masih bisa menjadwal
+       ulang: kotaknya tersegel lagi dan titipan diterima lagi sampai jadwal baru (0.4.2).
     4. Penerima membuka link buka: `GET /k/{slug}` mengembalikan semua surat setelah `opensAt`,
        dan `POST /k/{slug}/open` dipanggil saat surat pertama dibuka.
 
     Semua waktu kotak dibandingkan dengan jam server. Semua 404 di `/boxes/…` dan `/k/…`
     (termasuk id, kode titip, atau slug yang bentuknya salah) berkode `box_not_found`.
-    `box_closed` dijawab `409` di `PATCH /boxes/{id}` (bentrok dengan keadaan kotak) dan `422`
+    `box_closed` dijawab `409` di `PATCH /boxes/{id}` (penerima sudah membuka kotaknya) dan `422`
     di `POST /letters` serta publish (titipan ditolak).
 
     **Masa berlaku**
@@ -360,14 +361,18 @@ paths:
       operationId: updateBox
       summary: Ubah judul, desain, atau jadwal buka
       description: |
-        Hanya selama kotak belum terbuka untuk penerima (`opensAt` masih di depan menurut jam
-        server); setelah itu `409 box_closed`.
+        Selama penerima belum membuka kotaknya (`openedAt` masih `null`), juga setelah `opensAt`
+        lewat; setelah penerima membukanya, `409 box_closed` (0.4.2; sebelumnya ditolak begitu
+        `opensAt` lewat). Jadi jadwal yang salah tidak terkunci begitu kotaknya terbuka.
 
         - `openNow: true` ("Buka sekarang"): `opensAt` diisi waktu server saat itu, dan
           `scheduled` jadi `true` karena `opensAt` sekarang waktu kotak benar-benar dibuka.
-          Jam HP tidak dipakai, jadi HP yang jamnya maju atau mundur tetap membuka kotak.
+          Jam HP tidak dipakai, jadi HP yang jamnya maju atau mundur tetap membuka kotak. Kotak
+          yang sudah terbuka tetap memakai `opensAt`-nya.
         - `opensAt` berupa waktu: menjadwalkan ulang (`scheduled` jadi `true`). Harus di depan
           jam server dan paling lambat `createdAt` + 30 hari, selain itu `422 invalid_box`.
+          Kotak yang sudah terbuka tersegel lagi untuk penerima, dan titipan diterima lagi
+          sampai jadwal baru.
         - `opensAt: null`: kembali ke mode manual (`opensAt` = `createdAt` + 30 hari, `scheduled`
           jadi `false`).
         - `openNow` dan `opensAt` tidak boleh dikirim bersamaan (`422 invalid_box`).
@@ -640,8 +645,8 @@ components:
             $ref: '#/components/schemas/Error'
     BoxConflict:
       description: |
-        Kotak sudah terbuka untuk penerima, jadi tidak bisa diubah (`box_closed`), atau belum
-        sampai `opensAt`, jadi belum bisa dibuka (`box_not_open`).
+        Penerima sudah membuka kotaknya, jadi kotaknya tidak bisa diubah lagi (`box_closed`), atau
+        belum sampai `opensAt`, jadi belum bisa dibuka (`box_not_open`).
       content:
         application/json:
           schema:

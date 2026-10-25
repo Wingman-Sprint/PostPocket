@@ -171,9 +171,10 @@ async function run(
       await gone()
       return
     }
+    // Penerima keburu membuka kotaknya (kontrak 0.4.2): jadwalnya tidak bisa diubah lagi.
     const closed = problem instanceof LetterApiError && problem.code === 'box_closed'
     error.value = closed
-      ? 'Kotak ini sudah terbuka, jadi jadwalnya tidak bisa diubah lagi.'
+      ? `${box.value?.to ?? 'Penerima'} sudah membuka kotaknya, jadi jadwalnya tidak bisa diubah lagi.`
       : errorMessage(problem)
     // Bagian jadwal hilang begitu kotaknya dimuat ulang sebagai terbuka, jadi pesannya di atas.
     if (closed) {
@@ -196,7 +197,10 @@ function openNow() {
   )
 }
 
-// Ubah jadwal: tanggal tertentu, atau kembali dibuka manual.
+// Ubah jadwal: tanggal tertentu, atau kembali dibuka manual. Selama penerima belum membukanya,
+// kotak yang sudah terbuka juga bisa dijadwal ulang (kontrak 0.4.2): kotaknya tersegel lagi dan
+// titipan diterima lagi sampai jadwal baru. Jadi jadwal yang salah tidak terkunci.
+const reschedulable = computed(() => !!box.value && !box.value.openedAt)
 const editing = ref(false)
 const scheduleInput = ref('')
 const scheduleRangeNow = computed(() =>
@@ -204,9 +208,10 @@ const scheduleRangeNow = computed(() =>
 )
 function startEditing() {
   if (!box.value) return
+  const current = Date.parse(box.value.opensAt)
   scheduleInput.value = toLocalInput(
-    box.value.scheduled
-      ? Date.parse(box.value.opensAt)
+    box.value.scheduled && current > Date.now()
+      ? current
       : Math.min(scheduleRangeNow.value.max, Date.now() + 24 * 60 * 60 * 1000),
   )
   editing.value = true
@@ -224,7 +229,9 @@ function saveSchedule() {
   void run(
     () => api.update(id, local.value!.editToken, { opensAt: date.toISOString() }),
     'schedule',
-    `Kotak terbuka sendiri ${formatWhen(date)}.`,
+    open.value
+      ? `Kotak tersegel lagi dan terbuka sendiri ${formatWhen(date)}. Teman-teman bisa menitip lagi sampai saat itu.`
+      : `Kotak terbuka sendiri ${formatWhen(date)}.`,
   )
 }
 function makeManual() {
@@ -232,7 +239,9 @@ function makeManual() {
   void run(
     () => api.update(id, local.value!.editToken, { opensAt: null }),
     'schedule',
-    'Kotak dibuka saat kamu menekan Buka sekarang.',
+    open.value
+      ? 'Kotak tersegel lagi. Kotak dibuka saat kamu menekan Buka sekarang.'
+      : 'Kotak dibuka saat kamu menekan Buka sekarang.',
   )
 }
 
@@ -300,7 +309,8 @@ async function removeBox() {
             Sudah terbuka untuk {{ box.to
             }}<template v-if="box.openedAt">
               dan sudah dibuka {{ formatWhen(box.openedAt) }}</template
-            >. Kotak ini dihapus {{ formatWhen(box.expiresAt) }}.
+            ><template v-else>, tapi dia belum membukanya</template>. Kotak ini dihapus
+            {{ formatWhen(box.expiresAt) }}.
           </template>
           <template v-else-if="box.scheduled">
             Terbuka sendiri {{ formatWhen(box.opensAt) }}. Sebelum itu, teman-teman bisa terus
@@ -320,7 +330,11 @@ async function removeBox() {
             Titipan sudah ditutup
           </h2>
           <p class="mt-1 text-caption text-ink-muted">
-            Kotaknya sudah terbuka, jadi link titip tidak menerima surat baru lagi.
+            Kotaknya sudah terbuka, jadi link titip tidak menerima surat baru lagi.<template
+              v-if="reschedulable"
+            >
+              Masih mau menerima titipan? Jadwalkan ulang di bagian Kapan dibuka.</template
+            >
           </p>
         </section>
         <section v-else class="mt-8" aria-labelledby="invite-title">
@@ -420,13 +434,20 @@ async function removeBox() {
         </section>
 
         <section
-          v-if="!open"
+          v-if="reschedulable"
           class="mt-8 border-t border-line-soft pt-6"
           aria-labelledby="schedule-title"
+          data-testid="box-schedule-section"
         >
           <h2 id="schedule-title" class="text-[19px] font-bold tracking-[-0.02em]">Kapan dibuka</h2>
+          <p v-if="open" class="mt-1 text-caption text-ink-muted">
+            Sudah terbuka, tapi {{ box.to }} belum membukanya. Kalau waktunya salah, jadwalkan
+            ulang: kotaknya tersegel lagi untuk {{ box.to }}, dan teman-teman bisa menitip lagi
+            sampai jadwal baru.
+          </p>
           <div class="mt-3 flex flex-wrap gap-2">
             <button
+              v-if="!open"
               type="button"
               class="inline-flex h-11 items-center rounded-control bg-ink px-4 text-body font-semibold text-white hover:bg-ink/90 disabled:opacity-60"
               :disabled="busy"
@@ -435,14 +456,20 @@ async function removeBox() {
             >
               Buka sekarang
             </button>
+            <!-- Di kotak yang sudah terbuka, jadwal ulang jadi tombol utama (Buka sekarang hilang). -->
             <button
               type="button"
-              class="inline-flex h-11 items-center rounded-control px-4 text-body font-semibold inset-ring inset-ring-line hover:bg-panel disabled:opacity-60"
+              class="inline-flex h-11 items-center rounded-control px-4 text-body font-semibold disabled:opacity-60"
+              :class="
+                open
+                  ? 'bg-ink text-white hover:bg-ink/90'
+                  : 'inset-ring inset-ring-line hover:bg-panel'
+              "
               :disabled="busy"
               data-testid="box-schedule"
               @click="startEditing"
             >
-              {{ box.scheduled ? 'Ubah jadwal' : 'Jadwalkan' }}
+              {{ open ? 'Jadwalkan ulang' : box.scheduled ? 'Ubah jadwal' : 'Jadwalkan' }}
             </button>
             <button
               v-if="box.scheduled"
