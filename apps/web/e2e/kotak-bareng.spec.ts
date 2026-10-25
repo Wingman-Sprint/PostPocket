@@ -356,6 +356,57 @@ test('kotak terjadwal tersegel sampai waktunya, jadwalnya bisa diubah atau dijad
   await nadia.context().close()
 })
 
+test('jadwal yang salah: kotak yang sudah terbuka bisa dijadwal ulang selama penerima belum membukanya', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000)
+  const links = await createBox(page, 'Ultah ke-23 Shelvia', 'Shelvia')
+  const slug = codeOf(links.open)
+  expect((await titipViaApi(request, links.invite, 'Budi', 'Selamat ya', false)).status).toBe(200)
+
+  // Kotaknya terbuka terlalu cepat. Penerima belum membukanya, jadi jadwalnya belum terkunci.
+  page.once('dialog', (question) => question.accept())
+  await page.getByTestId('box-open-now').click()
+  const status = page.getByTestId('box-manage-status')
+  await expect(status).toContainText('Sudah terbuka untuk Shelvia, tapi dia belum membukanya')
+  await expect(page.getByRole('heading', { name: 'Titipan sudah ditutup' })).toBeVisible()
+  await expect(page.getByTestId('box-schedule-section')).toContainText('jadwalkan ulang')
+  await expect(page.getByTestId('box-open-now')).toHaveCount(0)
+
+  // Dijadwal ulang: tersegel lagi untuk penerima, dan teman-teman bisa menitip lagi.
+  await page.getByTestId('box-schedule').filter({ hasText: 'Jadwalkan ulang' }).click()
+  const later = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  await page
+    .getByTestId('box-schedule-input')
+    .fill(`${later.getFullYear()}-${pad(later.getMonth() + 1)}-${pad(later.getDate())}T23:59`)
+  await page.getByRole('button', { name: 'Simpan jadwal' }).click()
+  await expect(page.getByText(/^Kotak tersegel lagi dan terbuka sendiri/)).toBeVisible()
+  await expect(status).toContainText('Terbuka sendiri')
+  await expect(page.getByTestId('box-invite-url')).toHaveValue(links.invite)
+  expect(await (await request.get(`/mock-api/k/${slug}`)).json()).toMatchObject({
+    openable: false,
+    letterCount: 1,
+    letters: [],
+  })
+  expect((await titipViaApi(request, links.invite, 'Sari', 'Susulan', false)).status).toBe(200)
+
+  // Setelah penerima membukanya, jadwalnya terkunci. Halaman pembuat yang belum dimuat ulang
+  // diberi tahu saat mencoba, lalu bagian jadwalnya hilang.
+  page.once('dialog', (question) => question.accept())
+  await page.getByTestId('box-open-now').click()
+  await expect(status).toContainText('dia belum membukanya')
+  expect((await request.post(`/mock-api/k/${slug}/open`)).status()).toBe(200)
+  await page.getByTestId('box-schedule').click()
+  await page.getByRole('button', { name: 'Simpan jadwal' }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Shelvia sudah membuka kotaknya, jadi jadwalnya tidak bisa diubah lagi.',
+  )
+  await expect(status).toContainText('sudah dibuka')
+  await expect(page.getByTestId('box-schedule-section')).toHaveCount(0)
+})
+
 test('kipas surat di folder yang terbuka tidak menutupi judul dan tidak membuat halaman bergeser', async ({
   page,
   browser,

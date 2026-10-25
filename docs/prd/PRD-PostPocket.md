@@ -253,7 +253,7 @@ Untuk ulang tahun, perpisahan, wisuda, atau kejutan lain: teman-teman menitip su
 
 1. **Pembuat kotak** (`/kotak/baru`) mengisi nama penerima, judul, seni folder, dan kapan dibuka: saat dia menekan Buka sekarang, atau tanggal tertentu (paling lambat 30 hari). Dia dapat dua link: link titip untuk grup teman-teman dan link buka untuk penerima.
 2. **Teman-teman** membuka link titip (`/titip/:kode`), menulis surat di editor biasa dengan nama pengirim, lalu "Titip ke kotak". Strip Booth masuk lewat Ambil foto di Booth, lalu Pakai di surat. Surat titipan tidak punya link sendiri dan isinya rahasia sampai kotak dibuka; pengirimnya bisa menariknya lagi.
-3. **Pembuat** (`/kotak/:id`) melihat nama pengirim dan jumlah foto (bukan isinya), bisa menghapus titipan yang tidak pantas, mengubah jadwal, Buka sekarang, atau menghapus kotak.
+3. **Pembuat** (`/kotak/:id`) melihat nama pengirim dan jumlah foto (bukan isinya), bisa menghapus titipan yang tidak pantas, mengubah jadwal, Buka sekarang, atau menghapus kotak. Selama penerima belum membukanya, jadwalnya masih bisa diubah walau kotaknya sudah terbuka, jadi jadwal yang salah tidak terkunci: kotaknya tersegel lagi dan titipan dibuka lagi sampai jadwal baru.
 4. **Penerima** (`/k/:slug`) melihat kotak tersegel dengan jumlah suratnya sebelum waktunya, dan halaman itu terbuka sendiri begitu kotaknya bisa dibuka. Setelah itu folder kaca dibuka, suratnya dibaca satu per satu (nama pengirim ditulis tangan di balik sampul), titik menandai surat yang belum dibuka, lalu "Simpan semua" menyimpan semuanya ke Kotak surat sebagai satu folder, dan fotonya jadi satu CD di TV.
 
 **Masa berlaku dan batas** (hemat storage dan egress free tier):

@@ -157,7 +157,10 @@ export async function updateMockBox(event: H3Event, id: string, raw: unknown) {
     ])
   }
   const now = Date.now()
-  if (now >= box.opensAt) return fail(event, 409, 'box_closed', 'kotak sudah terbuka')
+  // Selama penerima belum membukanya, juga setelah opensAt lewat (kontrak 0.4.2).
+  if (box.openedAt !== null) {
+    return fail(event, 409, 'box_closed', 'penerima sudah membuka kotaknya')
+  }
   const body = raw as {
     title?: string
     to?: string
@@ -175,8 +178,9 @@ export async function updateMockBox(event: H3Event, id: string, raw: unknown) {
   let opensAt = box.opensAt
   let scheduled = box.scheduled
   if (body.openNow) {
-    // "Buka sekarang" memakai jam server, bukan jam HP.
-    opensAt = now
+    // "Buka sekarang" memakai jam server, bukan jam HP. Kotak yang sudah terbuka tetap memakai
+    // waktu bukanya.
+    opensAt = Math.min(box.opensAt, now)
     scheduled = true
   } else if (body.opensAt === null) {
     opensAt = latest
