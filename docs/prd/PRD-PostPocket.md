@@ -2,7 +2,7 @@
 
 Oct 10, 2026 · @Kall
 
-> **Status:** rilis 1 live di [postpocket.vercel.app](https://postpocket.vercel.app) sejak 16 Oktober 2026, termasuk fase 2 (login Google dan cadangan Pocket) dan kotak bareng. Semua kriteria diterima lolos per 22 Oktober 2026, lewat E2E di CI dan [uji di HP sungguhan](../frontend.md#uji-di-hp-sungguhan). Bagian di bawah adalah rencana awal; keputusan sesudahnya dicatat di [panduan frontend](../frontend.md) dan [panduan backend](../backend.md).
+> **Status:** rilis 1 live di [postpocket.vercel.app](https://postpocket.vercel.app) sejak 16 Oktober 2026, termasuk fase 2 (login Google dan cadangan Pocket) dan kotak bareng. Semua kriteria diterima lolos per 22 Oktober 2026, lewat E2E di CI dan [uji di HP sungguhan](../frontend.md#uji-di-hp-sungguhan). Per 26 Oktober 2026 rilis 1 dinyatakan selesai, tanpa pekerjaan tersisa. Bagian di bawah adalah rencana awal; keputusan sesudahnya dicatat di [panduan frontend](../frontend.md) dan [panduan backend](../backend.md).
 
 ## Ringkasan
 
@@ -446,8 +446,8 @@ Risiko terbesar ada di performa kartu 3D di HP murah dan di Safari iOS yang bisa
 
 **Pertanyaan terbuka**
 
-- [x] Domain dan handle sosial untuk PostPocket (nama sudah final); cek ketersediaan. **Diputuskan: tetap `postpocket.vercel.app`**, gratis; domain sendiri dibeli kalau mau promosi besar. Dicek 22 Oktober 2026: `postpocket.com` sudah dipegang orang sejak 2011, dan `postpocket.app` dipakai produk lain (manajemen media sosial, terdaftar September 2026). `postpocket.id`, `.my.id`, `.web.id`, `.co`, `.io`, dan `.me` masih kosong. Handle Instagram, TikTok, dan X tidak bisa dicek tanpa login, jadi dicek langsung di aplikasinya saat dibutuhkan.
-- [x] Backend tetap Supabase atau stack sendiri? **Diputuskan: tetap Supabase**, proyeknya sudah dibuat. Kalau storage gratis 1 GB tidak cukup, foto dipindah ke Cloudflare R2 tanpa mengganti database.
+- [x] Domain dan handle sosial untuk PostPocket (nama sudah final); cek ketersediaan. **Diputuskan: tetap `postpocket.vercel.app`**, gratis, tanpa domain sendiri. Dicek 22 Oktober 2026: `postpocket.com` sudah dipegang orang sejak 2011, dan `postpocket.app` dipakai produk lain (manajemen media sosial, terdaftar September 2026). Handle Instagram, TikTok, dan X tidak bisa dicek tanpa login, jadi dicek langsung di aplikasinya saat dibutuhkan.
+- [x] Backend tetap Supabase atau stack sendiri? **Diputuskan: tetap Supabase**, proyeknya sudah dibuat.
 - [x] Gambar OG dirender di mana? **Diputuskan: browser waktu "Buat link"**, supaya sampulnya persis sama dengan kartu. Diunggah lewat URL bertanda tangan, divalidasi backend saat publish, dicatat sebagai `letter_assets` berjenis `og`. Frontend tidak memakai Nuxt OG Image; `/l/**` di-SSR lewat `routeRules` dengan header `X-Robots-Tag: noindex`.
 - [x] Repo public atau private? **Diputuskan: public**, karena Vercel Hobby memblokir deploy dari commit yang author-nya bukan pemilik akun di repo private. Terbukti di PR #6: commit dari akun Bintang ter-deploy di proyek Vercel milik Kall.
 - [x] Bucket `letter-assets` publik atau bertanda tangan? **Diputuskan: publik untuk baca** dengan path acak; upload tetap lewat URL bertanda tangan.

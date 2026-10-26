@@ -46,7 +46,7 @@ Belum ada. Login sudah diputuskan (fase 2, Google OAuth), lihat [Rancangan skema
 
 | Keputusan | Isi |
 | --- | --- |
-| Backend | **Supabase**, bukan stack sendiri. Kalau storage 1 GB tidak cukup, foto dipindah ke Cloudflare R2 dan database tetap di Supabase |
+| Backend | **Supabase**, bukan stack sendiri |
 | Gambar OG | **Dirender browser** waktu "Buat link" dari kartu yang sama dengan yang dilihat pengirim (JPEG 1200×630, maksimal 300.000 byte; PNG juga diterima tapi dari foto hampir selalu melewati batas), lalu diunggah lewat URL bertanda tangan seperti foto. Backend hanya memvalidasi tipe, ukuran, dan dimensi saat publish, lalu mencatatnya sebagai baris `letter_assets` berjenis `og`. Kalau dirender di Edge Function, tampilan foil harus dibuat ulang di sana |
 | Bucket `letter-assets` | **Publik untuk baca**, path acak tak tertebak per surat (`<letter_id>/<uuid>.<ext>`). Upload hanya lewat URL bertanda tangan dari `POST /letters`; tidak ada policy listing. Publik dipilih supaya crawler WhatsApp bisa mengambil gambar OG dan file bisa di-cache CDN (hemat egress) |
 | Batas foto | Maksimal **4 foto per surat** (sesuai template kolase), maksimal **500 KB per foto** setelah dikompres, tipe JPEG atau WebP. Cover (gambar depan dari foto user) punya batas yang sama tapi **tidak dihitung** ke 4 foto. Gambar OG maksimal 300 KB |
@@ -296,7 +296,7 @@ Disetujui Kall di #47. Migrasinya `supabase/migrations/20261014053904_phase2.sql
 **Keputusan (diambil bareng Kall, 14 Oktober 2026)**
 
 1. **Login: Google OAuth dulu.** Tidak perlu mengirim email. Magic link menyusul kalau ada yang minta, dengan SMTP sendiri, karena SMTP bawaan Supabase hanya mengirim beberapa email per jam dan hanya ke anggota tim proyek.
-2. **Kuota: 100 momen per user selama beta.** Sebelum dibuka untuk umum, bandingkan Supabase Pro dengan Cloudflare R2. R2 lebih murah, tapi berada di luar RLS Supabase, jadi butuh Edge Function untuk signed URL unggah dan baca.
+2. **Kuota: 100 momen per user selama beta.**
 3. **Masuk produksi begitu merge.** Tabelnya terkunci RLS dan belum dipakai, dan `main` tetap sama dengan produksi. Kalau ditahan, `supabase db push` untuk hotfix surat berikutnya ikut menerapkan migrasi fase 2 juga.
 
 ## Login Google
@@ -451,10 +451,10 @@ Audit ulang semua fungsi, migrasi, workflow, dan `config.toml`, 16 Oktober 2026.
 | `letters.owner_id` tidak pernah diisi | Dibuang |
 | CI hanya mengecek tipe tiga fungsi dan tidak memindai rahasia | `deno check */index.ts`, dan workflow `Web` menjalankan `scripts/check-secrets.sh` ke semua berkas |
 
-Yang belum dikerjakan, sengaja dibiarkan sebagai risiko yang diterima (diputuskan 22 Oktober 2026, ditinjau lagi sebelum promosi besar):
+Risiko yang diterima di rilis 1 (diputuskan 22 Oktober 2026):
 
-- Batas tingkat proyek (semua IP digabung) untuk surat, kotak, dan cadangan. Rate limit sekarang per IP dan per user, jadi banyak IP atau banyak akun masih bisa menghabiskan storage dan egress. Putuskan bareng soal Supabase Pro atau Cloudflare R2 sebelum promosi besar.
-- Belum ada alarm kalau job pembersihan berhenti. Sementara itu, cek `net._http_response` dan `function_errors_daily`.
+- Tidak ada batas tingkat proyek (semua IP digabung) untuk surat, kotak, dan cadangan. Rate limit hanya per IP dan per user, jadi banyak IP atau banyak akun masih bisa menghabiskan storage dan egress.
+- Tidak ada alarm kalau job pembersihan berhenti. Untuk memantaunya, cek `net._http_response` dan `function_errors_daily`.
 - GitHub Actions dipasang lewat tag, bukan hash commit. Dampaknya kecil: semua workflow hanya punya hak baca dan tidak memakai secret.
 - Tabel `profiles` tidak dipakai aplikasi, tapi barisnya dibuat trigger di `auth.users`. Membuang trigger di tabel milik Supabase Auth butuh hak pemilik tabel, jadi dibiarkan.
 
