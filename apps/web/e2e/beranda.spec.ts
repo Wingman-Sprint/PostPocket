@@ -131,7 +131,7 @@ test('Traktir PostPocket membuka perangko dan tautan Sociabuzz di tab baru', asy
   const dialog = page.getByRole('dialog', { name: 'Traktir PostPocket' })
   await expect(dialog).toBeVisible()
   const link = dialog.getByRole('link', { name: /Dukung lewat Sociabuzz/ })
-  await expect(link).toHaveAttribute('href', 'https://sociabuzz.com/byhund/tribe')
+  await expect(link).toHaveAttribute('href', 'https://sociabuzz.com/wingmanclutch/tribe')
   await expect(link).toHaveAttribute('target', '_blank')
   await expect(link).toHaveAttribute('rel', /noopener/)
   // Cap pos bertanggal hari ini, waktu Jakarta.
@@ -155,6 +155,6 @@ test('Traktir PostPocket membuka perangko dan tautan Sociabuzz di tab baru', asy
     )
   await page.getByTestId('support-open').click()
   const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()])
-  await expect(popup).toHaveURL('https://sociabuzz.com/byhund/tribe')
+  await expect(popup).toHaveURL('https://sociabuzz.com/wingmanclutch/tribe')
   await expect(dialog).toBeHidden()
 })

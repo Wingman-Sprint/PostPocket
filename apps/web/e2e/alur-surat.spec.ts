@@ -79,7 +79,7 @@ test('setelah link surat siap ditutup, dialog Traktir muncul sekali, lalu istira
   const support = page.getByRole('dialog', { name: 'Traktir PostPocket' })
   await expect(support).toBeVisible()
   const link = support.getByRole('link', { name: /Dukung lewat Sociabuzz/ })
-  await expect(link).toHaveAttribute('href', 'https://sociabuzz.com/byhund/tribe')
+  await expect(link).toHaveAttribute('href', 'https://sociabuzz.com/wingmanclutch/tribe')
   await support.getByRole('button', { name: 'Nanti saja' }).click()
   await expect(support).toBeHidden()
 
