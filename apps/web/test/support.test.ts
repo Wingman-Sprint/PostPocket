@@ -6,7 +6,7 @@ describe('dukungan Sociabuzz', () => {
     const url = new URL(SUPPORT_URL)
     expect(url.protocol).toBe('https:')
     expect(url.hostname).toBe('sociabuzz.com')
-    expect(url.pathname).toBe('/byhund/tribe')
+    expect(url.pathname).toBe('/wingmanclutch/tribe')
   })
 
   it('tanggal cap pos memakai bulan Indonesia dan waktu Jakarta', () => {

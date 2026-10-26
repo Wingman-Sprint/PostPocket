@@ -101,7 +101,7 @@ Emas hanya ada di dalam P, tidak pernah langsung di atas kanvas atau putih.
 
 ## Traktir PostPocket
 
-Ajakan dukungan lewat [Sociabuzz](https://sociabuzz.com/byhund/tribe), ditambahkan 16 Oktober 2026. Mengikuti aturan "bendanya dulu": dialognya dibuka dengan **perangko** PostPocket (`SupportStamp`), bukan ikon hati atau koin.
+Ajakan dukungan lewat [Sociabuzz](https://sociabuzz.com/wingmanclutch/tribe), ditambahkan 16 Oktober 2026. Mengikuti aturan "bendanya dulu": dialognya dibuka dengan **perangko** PostPocket (`SupportStamp`), bukan ikon hati atau koin.
 
 - Perangko kertas putih bergerigi (lubang tepi lewat `mask`), wajahnya kertas `canvas` dengan logo P-amplop, nilai "Rp seikhlasnya", dan "Indonesia" seperti perangko sungguhan.
 - Di dialog, perangkonya ditempel dengan sedikit putaran lalu dicap pos bertanggal hari ini (waktu Jakarta). Tulisan kapital di cap pos itu bagian dari bendanya. Tanpa animasi kalau `prefers-reduced-motion`.

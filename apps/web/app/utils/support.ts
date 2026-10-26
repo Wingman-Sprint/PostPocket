@@ -2,7 +2,7 @@
 // hanya membuka halamannya di tab baru, tanpa mengirim data apa pun.
 
 /** Halaman dukungan PostPocket di Sociabuzz. */
-export const SUPPORT_URL = 'https://sociabuzz.com/byhund/tribe'
+export const SUPPORT_URL = 'https://sociabuzz.com/wingmanclutch/tribe'
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES']
 
